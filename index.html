@@ -320,7 +320,7 @@ fetch('songs.json')
 });
 
 document.getElementById("search").addEventListener("input", function(){
-    const query = this.value.trim().toLowerCase();
+    const query = this.value.trim();
     const resultsDiv = document.getElementById("results");
     const infoDiv = document.getElementById("info");
 
@@ -330,41 +330,37 @@ document.getElementById("search").addEventListener("input", function(){
         return;
     }
 
-const searchWords = query
-    .split(/\s+/)
-    .filter(word => word.length > 0);
+    const searchWords = normalizeText(query)
+        .split(/\s+/)
+        .filter(word => word.length > 0);
 
-const searchWords = normalizeText(query)
-    .split(/\s+/)
-    .filter(word => word.length > 0);
+    let results = songs.filter(song => {
+        const title = normalizeText(song.Titel || "");
+        const artist = normalizeText(song.Artiest || "");
+        const album = normalizeText(song.Album || "");
+        const genre = normalizeText(song.Genre || "");
+        const year = normalizeText(song.Jaar || "");
 
-let results = songs.filter(song => {
-    const title = normalizeText(song.Titel || "");
-    const artist = normalizeText(song.Artiest || "");
-    const album = normalizeText(song.Album || "");
-    const genre = normalizeText(song.Genre || "");
-    const year = normalizeText(song.Jaar || "");
+        const searchableText = [
+            title,
+            artist,
+            album,
+            genre,
+            year
+        ].join(" ");
 
-    const searchableText = [
-        title,
-        artist,
-        album,
-        genre,
-        year
-    ].join(" ");
+        const searchableCompact = searchableText.replace(/\s+/g, "");
 
-    const searchableCompact = searchableText.replace(/\s+/g, "");
+        return searchWords.every(word => {
+            const normalizedWord = normalizeText(word);
+            const compactWord = normalizedWord.replace(/\s+/g, "");
 
-    return searchWords.every(word => {
-        const normalizedWord = normalizeText(word);
-        const compactWord = normalizedWord.replace(/\s+/g, "");
-
-        return (
-            searchableText.includes(normalizedWord) ||
-            searchableCompact.includes(compactWord)
-        );
+            return (
+                searchableText.includes(normalizedWord) ||
+                searchableCompact.includes(compactWord)
+            );
+        });
     });
-});
 
     results = results.slice(0,50);
 
