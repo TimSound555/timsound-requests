@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>TimSound Requests</title>
+
+<style>
+:root{
+    --bg:#111827;
+    --card:#1f2937;
+    --text:#f9fafb;
+    --muted:#9ca3af;
+    --accent:#38bdf8;
+    --accent-dark:#0284c7;
+    --border:#374151;
+    --danger:#f97316;
+}
+
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    font-family:Arial, sans-serif;
+    background:var(--bg);
+    color:var(--text);
+}
+
+.container{
+    max-width:900px;
+    margin:0 auto;
+    padding:20px;
+}
+
+.header{
+    margin-bottom:24px;
+    text-align:center;
+}
+
+.logo{
+    max-width:220px;
+    max-height:120px;
+    margin-bottom:18px;
+}
+
+.header h1{
+    margin:0 0 8px 0;
+    font-size:30px;
+}
+
+.header p{
+    margin:0;
+    color:var(--muted);
+}
+
+.search-box{
+    width:100%;
+    padding:16px;
+    font-size:18px;
+    border-radius:12px;
+    border:1px solid var(--border);
+    background:#030712;
+    color:var(--text);
+    outline:none;
+}
+
+.search-box:focus{
+    border-color:var(--accent);
+}
+
+.info{
+    color:var(--muted);
+    margin:14px 0;
+    font-size:14px;
+}
+
+.result{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:14px;
+    margin-bottom:10px;
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    align-items:center;
+}
+
+.song-title{
+    font-weight:bold;
+    font-size:16px;
+}
+
+.artist{
+    color:var(--muted);
+    margin-top:4px;
+    font-size:14px;
+}
+
+button{
+    border:none;
+    border-radius:10px;
+    padding:10px 14px;
+    font-size:15px;
+    cursor:pointer;
+    background:var(--accent);
+    color:#001018;
+    font-weight:bold;
+}
+
+button:hover{
+    background:var(--accent-dark);
+    color:white;
+}
+
+.secondary-button{
+    width:100%;
+    margin-top:16px;
+    background:transparent;
+    border:1px solid var(--accent);
+    color:var(--accent);
+}
+
+.secondary-button:hover{
+    background:var(--accent);
+    color:#001018;
+}
+
+.modal-backdrop{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.75);
+    padding:20px;
+    z-index:10;
+}
+
+.modal{
+    max-width:520px;
+    margin:60px auto;
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:20px;
+}
+
+.modal h2{
+    margin-top:0;
+}
+
+.form-group{
+    margin-bottom:14px;
+}
+
+label{
+    display:block;
+    margin-bottom:6px;
+    color:var(--muted);
+    font-size:14px;
+}
+
+input,
+textarea{
+    width:100%;
+    padding:12px;
+    border-radius:10px;
+    border:1px solid var(--border);
+    background:#030712;
+    color:var(--text);
+    font-size:16px;
+}
+
+textarea{
+    min-height:90px;
+    resize:vertical;
+}
+
+.modal-actions{
+    display:flex;
+    gap:10px;
+    margin-top:18px;
+}
+
+.modal-actions button{
+    flex:1;
+}
+
+.cancel-button{
+    background:#374151;
+    color:white;
+}
+
+.confirmation{
+    display:none;
+    background:#052e16;
+    border:1px solid #16a34a;
+    color:#dcfce7;
+    padding:12px;
+    border-radius:12px;
+    margin-bottom:16px;
+}
+
+@media(max-width:600px){
+    .container{
+        padding:16px;
+    }
+
+    .header h1{
+        font-size:25px;
+    }
+
+    .result{
+        align-items:flex-start;
+        flex-direction:column;
+    }
+
+    .result button{
+        width:100%;
+    }
+
+    .modal{
+        margin:30px auto;
+    }
+
+    .modal-actions{
+        flex-direction:column;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="header">
+    <img src="logo.png" alt="TimSound logo" class="logo">
+    <h1>TimSound Requests</h1>
+    <p>Zoek een nummer uit de collectie en geef je verzoek door.</p>
+</div>
+
+    <div id="confirmation" class="confirmation"></div>
+
+    <input
+        type="text"
+        id="search"
+        class="search-box"
+        placeholder="Zoek op titel of artiest..."
+        autocomplete="off"
+    >
+
+    <div id="info" class="info">
+        Typ minstens 2 letters om te zoeken.
+    </div>
+
+    <div id="results"></div>
+
+    <button class="secondary-button" onclick="openOtherSongModal()">
+        Ik vind mijn nummer niet
+    </button>
+
+</div>
+
+<div id="requestModal" class="modal-backdrop">
+    <div class="modal">
+        <h2 id="modalTitle">Nummer aanvragen</h2>
+
+        <div id="selectedSongInfo" class="info"></div>
+
+        <div class="form-group">
+            <label for="requestName">Je naam</label>
+            <input type="text" id="requestName" placeholder="Bijvoorbeeld: Tim">
+        </div>
+
+        <div class="form-group">
+            <label for="requestNote">Opmerking voor de DJ</label>
+            <textarea id="requestNote" placeholder="Bijvoorbeeld: voor de jarige, graag straks, volledige versie..."></textarea>
+        </div>
+
+        <div id="otherSongFields" style="display:none;">
+            <div class="form-group">
+                <label for="freeTitle">Titel</label>
+                <input type="text" id="freeTitle" placeholder="Titel van het nummer">
+            </div>
+
+            <div class="form-group">
+                <label for="freeArtist">Artiest</label>
+                <input type="text" id="freeArtist" placeholder="Artiest">
+            </div>
+        </div>
+
+        <div class="modal-actions">
+            <button class="cancel-button" onclick="closeModal()">Annuleren</button>
+            <button onclick="submitRequest()">Verzoek doorgeven</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://vxsafckdleoyntcaglur.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ4c2FmY2tkbGVveW50Y2FnbHVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU4NjU4NTAsImV4cCI6MjEwMTQ0MTg1MH0.TKXbz74qjYt6Mp1PJYSJSnHT4Gok43HJHj-x5pMnK-Q";
+let songs = [];
+let selectedSong = null;
+let isOtherSong = false;
+
+fetch('songs.json')
+.then(response => response.json())
+.then(data => {
+    songs = data;
+    document.getElementById("info").innerText =
+        "Catalogus geladen: " + songs.length + " nummers beschikbaar.";
+})
+.catch(error => {
+    document.getElementById("info").innerText =
+        "De muziekcatalogus kon niet geladen worden.";
+    console.error(error);
+});
+
+document.getElementById("search").addEventListener("input", function(){
+    const query = this.value.trim().toLowerCase();
+    const resultsDiv = document.getElementById("results");
+    const infoDiv = document.getElementById("info");
+
+    if(query.length < 2){
+        resultsDiv.innerHTML = "";
+        infoDiv.innerText = "Typ minstens 2 letters om te zoeken.";
+        return;
+    }
+
+    let results = songs.filter(song => {
+        const title = (song.Titel || "").toLowerCase();
+        const artist = (song.Artiest || "").toLowerCase();
+
+        return title.includes(query) || artist.includes(query);
+    });
+
+    results = results.slice(0,50);
+
+    infoDiv.innerText = results.length + " resultaat/resultaten getoond.";
+
+    let html = "";
+
+    results.forEach((song, index) => {
+        html += `
+            <div class="result">
+                <div>
+                    <div class="song-title">${escapeHtml(song.Titel || "")}</div>
+                    <div class="artist">${escapeHtml(song.Artiest || "")}</div>
+                </div>
+                <button onclick="openSongModal(${index})">Aanvragen</button>
+            </div>
+        `;
+    });
+
+    window.currentResults = results;
+    resultsDiv.innerHTML = html;
+});
+
+function openSongModal(index){
+    selectedSong = window.currentResults[index];
+    isOtherSong = false;
+
+    document.getElementById("modalTitle").innerText = "Nummer aanvragen";
+    document.getElementById("selectedSongInfo").innerHTML =
+        "<strong>" + escapeHtml(selectedSong.Titel || "") + "</strong><br>" +
+        escapeHtml(selectedSong.Artiest || "");
+
+    document.getElementById("otherSongFields").style.display = "none";
+
+    document.getElementById("requestName").value = "";
+    document.getElementById("requestNote").value = "";
+
+    document.getElementById("requestModal").style.display = "block";
+}
+
+function openOtherSongModal(){
+    selectedSong = null;
+    isOtherSong = true;
+
+    document.getElementById("modalTitle").innerText = "Ander nummer aanvragen";
+    document.getElementById("selectedSongInfo").innerText =
+        "Geef hieronder het nummer in dat niet in de lijst staat.";
+
+    document.getElementById("otherSongFields").style.display = "block";
+
+    document.getElementById("requestName").value = "";
+    document.getElementById("requestNote").value = "";
+    document.getElementById("freeTitle").value = "";
+    document.getElementById("freeArtist").value = "";
+
+    document.getElementById("requestModal").style.display = "block";
+}
+
+function closeModal(){
+    document.getElementById("requestModal").style.display = "none";
+}
+
+function submitRequest(){
+    const name = document.getElementById("requestName").value.trim();
+    const note = document.getElementById("requestNote").value.trim();
+
+    let request = {
+        songid: "",
+        titel: "",
+        artiest: "",
+        naam: name,
+        opmerking: note,
+        andernummer: isOtherSong,
+        vrijetitel: "",
+        vrijeartiest: ""
+    };
+
+    if(isOtherSong){
+        request.vrijetitel = document.getElementById("freeTitle").value.trim();
+        request.vrijeartiest = document.getElementById("freeArtist").value.trim();
+        request.titel = request.vrijetitel;
+        request.artiest = request.vrijeartiest;
+
+        if(request.vrijetitel.length < 1){
+            alert("Vul minstens een titel in.");
+            return;
+        }
+    }
+    else{
+        request.songid = selectedSong.SongID;
+        request.titel = selectedSong.Titel;
+        request.artiest = selectedSong.Artiest;
+    }
+
+    fetch(
+    `${SUPABASE_URL}/rest/v1/requests`,
+    {
+        method: "POST",
+        headers: {
+            "apikey": SUPABASE_KEY,
+            "Authorization": `Bearer ${SUPABASE_KEY}`,
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal"
+        },
+        body: JSON.stringify({
+            songid: request.songid,
+            titel: request.titel,
+            artiest: request.artiest,
+            naam: request.naam,
+            opmerking: request.opmerking,
+            andernummer: request.andernummer,
+            vrijetitel: request.vrijetitel,
+            vrijeartiest: request.vrijeartiest,
+            status: "Nieuw"
+        })
+    }
+)
+.then(response => {
+
+    if (!response.ok) {
+        throw new Error("Opslaan mislukt");
+    }
+
+    closeModal();
+
+    const confirmation =
+        document.getElementById("confirmation");
+
+    confirmation.style.display = "block";
+
+    confirmation.innerHTML =
+        "✅ Verzoek succesvol doorgestuurd.";
+
+})
+.catch(error => {
+
+    alert(
+        "Opslaan mislukt. Controleer de Supabase-configuratie."
+    );
+
+    console.error(error);
+
+});
+}
+
+function escapeHtml(value){
+    return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>TimSound Dashboard</title>
+
+<style>
+:root{
+    --bg:#111827;
+    --card:#1f2937;
+    --text:#f9fafb;
+    --muted:#9ca3af;
+    --accent:#38bdf8;
+    --accent-dark:#0284c7;
+    --border:#374151;
+    --success:#22c55e;
+    --danger:#ef4444;
+}
+
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    font-family:Arial, sans-serif;
+    background:var(--bg);
+    color:var(--text);
+}
+
+.container{
+    max-width:1000px;
+    margin:0 auto;
+    padding:20px;
+}
+
+.header{
+    display:flex;
+    justify-content:space-between;
+    gap:16px;
+    align-items:flex-start;
+    margin-bottom:24px;
+}
+
+.brand{
+    display:flex;
+    gap:16px;
+    align-items:center;
+}
+
+.logo{
+    max-width:90px;
+    max-height:90px;
+}
+
+.header h1{
+    margin:0 0 8px 0;
+    font-size:30px;
+}
+
+.header p{
+    margin:0;
+    color:var(--muted);
+}
+
+.stats{
+    background:var(--card);
+    border:1px solid var(--border);
+    padding:12px 16px;
+    border-radius:12px;
+    color:var(--muted);
+    min-width:180px;
+    text-align:right;
+}
+
+.actions{
+    display:flex;
+    gap:10px;
+    margin-bottom:18px;
+    flex-wrap:wrap;
+}
+
+button{
+    border:none;
+    border-radius:10px;
+    padding:10px 14px;
+    font-size:15px;
+    cursor:pointer;
+    background:var(--accent);
+    color:#001018;
+    font-weight:bold;
+}
+
+button:hover{
+    background:var(--accent-dark);
+    color:white;
+}
+
+.secondary{
+    background:#374151;
+    color:white;
+}
+
+.request{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:16px;
+    margin-bottom:12px;
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:16px;
+    align-items:center;
+}
+
+.song-title{
+    font-weight:bold;
+    font-size:18px;
+    margin-bottom:4px;
+}
+
+.artist{
+    color:var(--muted);
+    font-size:15px;
+    margin-bottom:8px;
+}
+
+.meta{
+    color:var(--muted);
+    font-size:14px;
+    line-height:1.5;
+}
+
+.badge{
+    display:inline-block;
+    padding:4px 8px;
+    border-radius:999px;
+    font-size:12px;
+    margin-bottom:8px;
+    background:#374151;
+    color:#e5e7eb;
+}
+
+.badge-other{
+    background:#7c2d12;
+    color:#fed7aa;
+}
+
+.request-actions{
+    display:flex;
+    gap:8px;
+}
+
+.done{
+    background:var(--success);
+    color:#052e16;
+}
+
+.reject{
+    background:var(--danger);
+    color:white;
+}
+
+.empty{
+    background:var(--card);
+    border:1px dashed var(--border);
+    border-radius:14px;
+    padding:24px;
+    color:var(--muted);
+    text-align:center;
+}
+
+.error{
+    background:#450a0a;
+    border:1px solid #ef4444;
+    color:#fee2e2;
+    padding:14px;
+    border-radius:12px;
+    margin-bottom:16px;
+    display:none;
+}
+
+@media(max-width:700px){
+    .container{
+        padding:16px;
+    }
+
+    .header{
+        flex-direction:column;
+    }
+
+    .stats{
+        width:100%;
+        text-align:left;
+    }
+
+    .request{
+        grid-template-columns:1fr;
+    }
+
+    .request-actions{
+        flex-direction:column;
+    }
+
+    .brand{
+        align-items:flex-start;
+    }
+
+    .logo{
+        max-width:70px;
+        max-height:70px;
+    }
+
+    .request-actions button{
+        width:100%;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+ <div class="header">
+    <div class="brand">
+        <img src="logo.png" alt="TimSound logo" class="logo">
+
+        <div>
+            <h1>TimSound Dashboard</h1>
+            <p>Live overzicht van nieuwe verzoeknummers.</p>
+        </div>
+    </div>
+
+    <div class="stats">
+        <div id="countNew">Nieuwe verzoeken: 0</div>
+        <div id="lastRefresh">Laatste update: -</div>
+    </div>
+</div>
+
+    <div id="errorBox" class="error"></div>
+
+    <div class="actions">
+        <button onclick="loadRequests()">Vernieuwen</button>
+        <button class="secondary" onclick="toggleAutoRefresh()" id="autoRefreshButton">
+            Auto-refresh: aan
+        </button>
+    </div>
+
+    <div id="requests"></div>
+
+</div>
+
+<script>
+const SUPABASE_URL = "https://vxsafckdleoyntcaglur.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ4c2FmY2tkbGVveW50Y2FnbHVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU4NjU4NTAsImV4cCI6MjEwMTQ0MTg1MH0.TKXbz74qjYt6Mp1PJYSJSnHT4Gok43HJHj-x5pMnK-Q";
+
+// Kies hier je eigen dashboardcode
+const DASHBOARD_CODE = "TimSoundDashBoard555";
+
+// Controleer de code in de URL
+const urlParams = new URLSearchParams(window.location.search);
+const providedCode = urlParams.get("code");
+
+if (providedCode !== DASHBOARD_CODE) {
+    document.body.innerHTML = `
+        <div style="
+            min-height:100vh;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            background:#111827;
+            color:#f9fafb;
+            font-family:Arial, sans-serif;
+            padding:20px;
+            text-align:center;
+        ">
+            <div style="
+                max-width:420px;
+                background:#1f2937;
+                border:1px solid #374151;
+                border-radius:16px;
+                padding:28px;
+            ">
+                <h1 style="margin-top:0;">Geen toegang</h1>
+                <p style="color:#9ca3af;">
+                    Dit dashboard is enkel beschikbaar met een geldige toegangscode.
+                </p>
+            </div>
+        </div>
+    `;
+
+    throw new Error("Geen geldige dashboardcode.");
+}
+
+let autoRefresh = true;
+let autoRefreshTimer = null;
+
+async function loadRequests(){
+    hideError();
+
+    try{
+        const response = await fetch(
+            `${SUPABASE_URL}/rest/v1/requests?status=eq.Nieuw&order=created_at.asc`,
+            {
+                method:"GET",
+                headers:{
+                    "apikey": SUPABASE_KEY,
+                    "Authorization": `Bearer ${SUPABASE_KEY}`,
+                    "Content-Type":"application/json"
+                }
+            }
+        );
+
+        if(!response.ok){
+            throw new Error("Verzoeken ophalen mislukt");
+        }
+
+        const requests = await response.json();
+
+        renderRequests(requests);
+
+        document.getElementById("countNew").innerText =
+            "Nieuwe verzoeken: " + requests.length;
+
+        document.getElementById("lastRefresh").innerText =
+            "Laatste update: " + new Date().toLocaleTimeString("nl-BE", {
+                hour:"2-digit",
+                minute:"2-digit",
+                second:"2-digit"
+            });
+    }
+    catch(error){
+        showError("Kon verzoeken niet ophalen. Controleer Supabase SELECT-policy en API-gegevens.");
+        console.error(error);
+    }
+}
+
+function renderRequests(requests){
+    const container = document.getElementById("requests");
+
+    if(requests.length === 0){
+        container.innerHTML = `
+            <div class="empty">
+                Geen nieuwe verzoeken.
+            </div>
+        `;
+        return;
+    }
+
+    let html = "";
+
+    requests.forEach(request => {
+        const title = request.titel || request.vrijetitel || "Onbekende titel";
+        const artist = request.artiest || request.vrijeartiest || "";
+        const name = request.naam || "Anoniem";
+        const note = request.opmerking || "";
+        const created = formatDateTime(request.created_at);
+
+        html += `
+            <div class="request">
+                <div>
+                    ${request.andernummer ? `<div class="badge badge-other">Ander nummer</div>` : `<div class="badge">Uit collectie</div>`}
+
+                    <div class="song-title">${escapeHtml(title)}</div>
+                    <div class="artist">${escapeHtml(artist)}</div>
+
+                    <div class="meta">
+                        Aangevraagd door: ${escapeHtml(name)}<br>
+                        Tijdstip: ${escapeHtml(created)}
+                        ${note ? `<br>Opmerking: ${escapeHtml(note)}` : ""}
+                    </div>
+                </div>
+
+                <div class="request-actions">
+                    <button class="done" onclick="updateStatus(${request.id}, 'Gedraaid')">
+                        Gedraaid
+                    </button>
+                    <button class="reject" onclick="updateStatus(${request.id}, 'Geweigerd')">
+                        Weiger
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+}
+
+async function updateStatus(id, status){
+    hideError();
+
+    try{
+        const response = await fetch(
+            `${SUPABASE_URL}/rest/v1/requests?id=eq.${id}`,
+            {
+                method:"PATCH",
+                headers:{
+                    "apikey": SUPABASE_KEY,
+                    "Authorization": `Bearer ${SUPABASE_KEY}`,
+                    "Content-Type":"application/json",
+                    "Prefer":"return=minimal"
+                },
+                body: JSON.stringify({
+                    status: status
+                })
+            }
+        );
+
+        if(!response.ok){
+            throw new Error("Status wijzigen mislukt");
+        }
+
+        await loadRequests();
+    }
+    catch(error){
+        showError("Kon status niet wijzigen. Controleer Supabase UPDATE-policy.");
+        console.error(error);
+    }
+}
+
+function toggleAutoRefresh(){
+    autoRefresh = !autoRefresh;
+
+    document.getElementById("autoRefreshButton").innerText =
+        "Auto-refresh: " + (autoRefresh ? "aan" : "uit");
+
+    setupAutoRefresh();
+}
+
+function setupAutoRefresh(){
+    if(autoRefreshTimer){
+        clearInterval(autoRefreshTimer);
+    }
+
+    if(autoRefresh){
+        autoRefreshTimer = setInterval(loadRequests, 5000);
+    }
+}
+
+function formatDateTime(value){
+    if(!value){
+        return "-";
+    }
+
+    const date = new Date(value);
+
+    return date.toLocaleString("nl-BE", {
+        day:"2-digit",
+        month:"2-digit",
+        hour:"2-digit",
+        minute:"2-digit"
+    });
+}
+
+function showError(message){
+    const box = document.getElementById("errorBox");
+    box.style.display = "block";
+    box.innerText = message;
+}
+
+function hideError(){
+    const box = document.getElementById("errorBox");
+    box.style.display = "none";
+    box.innerText = "";
+}
+
+function escapeHtml(value){
+    return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+loadRequests();
+setupAutoRefresh();
+</script>
+
+</body>
+</html>
