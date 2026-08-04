@@ -247,6 +247,7 @@ button:hover{
     <button class="secondary" onclick="setStatusFilter('Gedraaid')">Gedraaid</button>
     <button class="secondary" onclick="setStatusFilter('Geweigerd')">Geweigerd</button>
     <button class="secondary" onclick="setStatusFilter('Alle')">Alle</button>
+    <button class="reject" onclick="clearRequests()">🗑 Nieuwe avond starten</button>
     <button class="secondary" onclick="loadRequests()">Vernieuwen</button>
     <button class="secondary" onclick="toggleAutoRefresh()" id="autoRefreshButton">
         Auto-refresh: aan
@@ -400,6 +401,46 @@ function renderRequests(requests){
     container.innerHTML = html;
 }
 
+async function clearRequests() {
+
+    const confirmed = confirm(
+        "Ben je zeker dat je alle verzoeken wilt verwijderen?"
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+
+        const response = await fetch(
+            `${SUPABASE_URL}/rest/v1/requests?id=gt.0`,
+            {
+                method: "DELETE",
+                headers: {
+                    "apikey": SUPABASE_KEY,
+                    "Authorization": `Bearer ${SUPABASE_KEY}`
+                }
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error("Verwijderen mislukt");
+        }
+
+        await loadRequests();
+
+        alert("Alle verzoeken zijn verwijderd.");
+
+    }
+    catch(error){
+
+        alert("Verwijderen mislukt.");
+
+        console.error(error);
+    }
+}
+    
 async function updateStatus(id, status){
     hideError();
 
