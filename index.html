@@ -334,6 +334,10 @@ const searchWords = query
     .split(/\s+/)
     .filter(word => word.length > 0);
 
+const searchWords = normalizeText(query)
+    .split(/\s+/)
+    .filter(word => word.length > 0);
+
 let results = songs.filter(song => {
     const title = normalizeText(song.Titel || "");
     const artist = normalizeText(song.Artiest || "");
@@ -349,9 +353,17 @@ let results = songs.filter(song => {
         year
     ].join(" ");
 
-    return searchWords.every(word =>
-        searchableText.includes(normalizeText(word))
-    );
+    const searchableCompact = searchableText.replace(/\s+/g, "");
+
+    return searchWords.every(word => {
+        const normalizedWord = normalizeText(word);
+        const compactWord = normalizedWord.replace(/\s+/g, "");
+
+        return (
+            searchableText.includes(normalizedWord) ||
+            searchableCompact.includes(compactWord)
+        );
+    });
 });
 
     results = results.slice(0,50);
