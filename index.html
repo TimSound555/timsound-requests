@@ -330,12 +330,29 @@ document.getElementById("search").addEventListener("input", function(){
         return;
     }
 
-    let results = songs.filter(song => {
-        const title = (song.Titel || "").toLowerCase();
-        const artist = (song.Artiest || "").toLowerCase();
+const searchWords = query
+    .split(/\s+/)
+    .filter(word => word.length > 0);
 
-        return title.includes(query) || artist.includes(query);
-    });
+let results = songs.filter(song => {
+    const title = normalizeText(song.Titel || "");
+    const artist = normalizeText(song.Artiest || "");
+    const album = normalizeText(song.Album || "");
+    const genre = normalizeText(song.Genre || "");
+    const year = normalizeText(song.Jaar || "");
+
+    const searchableText = [
+        title,
+        artist,
+        album,
+        genre,
+        year
+    ].join(" ");
+
+    return searchWords.every(word =>
+        searchableText.includes(normalizeText(word))
+    );
+});
 
     results = results.slice(0,50);
 
@@ -481,6 +498,15 @@ function submitRequest(){
 });
 }
 
+function normalizeText(value){
+    return String(value)
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+}    
+    
 function escapeHtml(value){
     return String(value)
         .replaceAll("&", "&amp;")
