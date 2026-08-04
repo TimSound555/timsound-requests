@@ -243,11 +243,15 @@ button:hover{
     <div id="errorBox" class="error"></div>
 
     <div class="actions">
-        <button onclick="loadRequests()">Vernieuwen</button>
-        <button class="secondary" onclick="toggleAutoRefresh()" id="autoRefreshButton">
-            Auto-refresh: aan
-        </button>
-    </div>
+    <button onclick="setStatusFilter('Nieuw')">Nieuw</button>
+    <button class="secondary" onclick="setStatusFilter('Gedraaid')">Gedraaid</button>
+    <button class="secondary" onclick="setStatusFilter('Geweigerd')">Geweigerd</button>
+    <button class="secondary" onclick="setStatusFilter('Alle')">Alle</button>
+    <button class="secondary" onclick="loadRequests()">Vernieuwen</button>
+    <button class="secondary" onclick="toggleAutoRefresh()" id="autoRefreshButton">
+        Auto-refresh: aan
+    </button>
+</div>
 
     <div id="requests"></div>
 
@@ -297,13 +301,20 @@ if (providedCode !== DASHBOARD_CODE) {
 
 let autoRefresh = true;
 let autoRefreshTimer = null;
+let currentStatusFilter = "Nieuw";
 
 async function loadRequests(){
     hideError();
 
     try{
-        const response = await fetch(
-            `${SUPABASE_URL}/rest/v1/requests?status=eq.Nieuw&order=created_at.asc`,
+        let queryUrl = `${SUPABASE_URL}/rest/v1/requests?order=created_at.asc`;
+
+if(currentStatusFilter !== "Alle"){
+    queryUrl = `${SUPABASE_URL}/rest/v1/requests?status=eq.${encodeURIComponent(currentStatusFilter)}&order=created_at.asc`;
+}
+
+const response = await fetch(
+    queryUrl,
             {
                 method:"GET",
                 headers:{
@@ -323,7 +334,7 @@ async function loadRequests(){
         renderRequests(requests);
 
         document.getElementById("countNew").innerText =
-            "Nieuwe verzoeken: " + requests.length;
+            currentStatusFilter + ": " + requests.length;
 
         document.getElementById("lastRefresh").innerText =
             "Laatste update: " + new Date().toLocaleTimeString("nl-BE", {
@@ -421,6 +432,11 @@ async function updateStatus(id, status){
     }
 }
 
+function setStatusFilter(status){
+    currentStatusFilter = status;
+    loadRequests();
+}
+    
 function toggleAutoRefresh(){
     autoRefresh = !autoRefresh;
 
