@@ -451,13 +451,15 @@ function renderRequests(requests){
 
                     <div class="song-title">${escapeHtml(title)}</div>
                     <div class="artist">${escapeHtml(artist)}</div>
-                    <div style="
-                        color:#fbbf24;
-                        font-weight:bold;
-                        margin-bottom:8px;
-                    ">
-                    🔥 ${count} aanvraag${count > 1 ? "en" : ""}
-                    </div>
+                    ${count > 1 ? `
+                        <div style="
+                            color:#fbbf24;
+                            font-weight:bold;
+                            margin-bottom:8px;
+                        ">
+                        🔥 ${count} aanvragen
+                        </div>
+                        ` : ""}
                    <div class="meta">
                         Eerste aanvraag: ${escapeHtml(created)}<br>
                         Laatste aanvraag: ${escapeHtml(formatDateTime(groupedItems[groupedItems.length - 1].created_at))}
