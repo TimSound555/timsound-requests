@@ -350,10 +350,41 @@ const response = await fetch(
     }
 }
 
+function groupRequests(requests){
+    const groups = {};
+
+    requests.forEach(request => {
+
+        const key =
+            (request.songid || "") +
+            "|" +
+            (request.titel || request.vrijetitel || "") +
+            "|" +
+            (request.artiest || request.vrijeartiest || "");
+
+        if(!groups[key]){
+
+            groups[key] = {
+                request: request,
+                count: 0
+            };
+
+        }
+
+        groups[key].count++;
+
+    });
+
+    return Object.values(groups)
+        .sort((a,b) => b.count - a.count);
+
+}
+    
 function renderRequests(requests){
     const container = document.getElementById("requests");
-
-    if(requests.length === 0){
+    const groupedRequests = groupRequests(requests);
+    
+    if(groupedRequests.length === 0){
         container.innerHTML = `
             <div class="empty">
                 Geen nieuwe verzoeken.
@@ -364,7 +395,10 @@ function renderRequests(requests){
 
     let html = "";
 
-    requests.forEach(request => {
+    groupedRequests.forEach(item => {
+
+        const request = item.request;
+        const count = item.count;
         const title = request.titel || request.vrijetitel || "Onbekende titel";
         const artist = request.artiest || request.vrijeartiest || "";
         const name = request.naam || "Anoniem";
@@ -378,7 +412,13 @@ function renderRequests(requests){
 
                     <div class="song-title">${escapeHtml(title)}</div>
                     <div class="artist">${escapeHtml(artist)}</div>
-
+                    <div style="
+                        color:#fbbf24;
+                        font-weight:bold;
+                        margin-bottom:8px;
+                    ">
+                    🔥 ${count} aanvraag${count > 1 ? "en" : ""}
+                    </div>
                     <div class="meta">
                         Aangevraagd door: ${escapeHtml(name)}<br>
                         Tijdstip: ${escapeHtml(created)}
