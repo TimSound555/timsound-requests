@@ -44,6 +44,41 @@ body{
     margin-bottom:24px;
 }
 
+.comments{
+    margin-top:12px;
+    border-top:1px solid var(--border);
+    padding-top:10px;
+}
+
+.comment{
+    background:#111827;
+    border:1px solid #374151;
+    border-radius:10px;
+    padding:10px;
+    margin-top:8px;
+    font-size:14px;
+}
+
+.comment strong{
+    display:inline-block;
+    margin-right:8px;
+}
+
+.comment span{
+    color:var(--muted);
+    font-size:12px;
+}
+
+.comment div{
+    margin-top:6px;
+    color:#e5e7eb;
+}
+
+.muted{
+    color:var(--muted) !important;
+    font-style:italic;
+}
+    
 .brand{
     display:flex;
     gap:16px;
@@ -351,6 +386,7 @@ const response = await fetch(
 }
 
 function groupRequests(requests){
+
     const groups = {};
 
     requests.forEach(request => {
@@ -366,12 +402,14 @@ function groupRequests(requests){
 
             groups[key] = {
                 request: request,
-                count: 0
+                count: 0,
+                items: []
             };
 
         }
 
         groups[key].count++;
+        groups[key].items.push(request);
 
     });
 
@@ -399,6 +437,7 @@ function renderRequests(requests){
 
         const request = item.request;
         const count = item.count;
+        const groupedItems = item.items;
         const title = request.titel || request.vrijetitel || "Onbekende titel";
         const artist = request.artiest || request.vrijeartiest || "";
         const name = request.naam || "Anoniem";
@@ -419,18 +458,21 @@ function renderRequests(requests){
                     ">
                     🔥 ${count} aanvraag${count > 1 ? "en" : ""}
                     </div>
-                    <div class="meta">
-                        Aangevraagd door: ${escapeHtml(name)}<br>
-                        Tijdstip: ${escapeHtml(created)}
-                        ${note ? `<br>Opmerking: ${escapeHtml(note)}` : ""}
+                   <div class="meta">
+                        Eerste aanvraag: ${escapeHtml(created)}<br>
+                        Laatste aanvraag: ${escapeHtml(formatDateTime(groupedItems[groupedItems.length - 1].created_at))}
+                    </div>
+                    
+                    <div class="comments">
+                        ${renderGroupedComments(groupedItems)}
                     </div>
                 </div>
 
                 <div class="request-actions">
-                    <button class="done" onclick="updateStatus(${request.id}, 'Gedraaid')">
+                  <button class="done" onclick="updateGroupStatus('${getGroupIds(groupedItems)}', 'Gedraaid')">
                         Gedraaid
                     </button>
-                    <button class="reject" onclick="updateStatus(${request.id}, 'Geweigerd')">
+                    <button class="reject" onclick="updateGroupStatus('${getGroupIds(groupedItems)}', 'Geweigerd')">
                         Weiger
                     </button>
                 </div>
@@ -441,6 +483,72 @@ function renderRequests(requests){
     container.innerHTML = html;
 }
 
+function renderGroupedComments(items){
+
+    let html = "";
+
+    items.forEach(item => {
+
+        const name = item.naam || "Anoniem";
+        const note = item.opmerking || "";
+        const time = formatDateTime(item.created_at);
+
+        html += `
+            <div class="comment">
+                <strong>${escapeHtml(name)}</strong>
+                <span>${escapeHtml(time)}</span>
+                ${note ? `<div>${escapeHtml(note)}</div>` : `<div class="muted">Geen opmerking</div>`}
+            </div>
+        `;
+    });
+
+    return html;
+}
+
+function getGroupIds(items){
+    return items.map(item => item.id).join(",");
+}
+
+async function updateGroupStatus(ids, status){
+
+    hideError();
+
+    const idList = ids.split(",");
+
+    try{
+
+        for(const id of idList){
+
+            const response = await fetch(
+                `${SUPABASE_URL}/rest/v1/requests?id=eq.${id}`,
+                {
+                    method:"PATCH",
+                    headers:{
+                        "apikey": SUPABASE_KEY,
+                        "Authorization": `Bearer ${SUPABASE_KEY}`,
+                        "Content-Type":"application/json",
+                        "Prefer":"return=minimal"
+                    },
+                    body: JSON.stringify({
+                        status: status
+                    })
+                }
+            );
+
+            if(!response.ok){
+                throw new Error("Status wijzigen mislukt");
+            }
+        }
+
+        await loadRequests();
+
+    }
+    catch(error){
+        showError("Kon groepsstatus niet wijzigen.");
+        console.error(error);
+    }
+}
+    
 async function clearRequests() {
 
     const confirmed = confirm(
